@@ -40,6 +40,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <typeinfo>
+#include <map>
 
 #ifndef MIGRAPHX_USE_TYPE_ERASED_MATCHERS
 #define MIGRAPHX_USE_TYPE_ERASED_MATCHERS 0
@@ -493,6 +495,108 @@ struct find_matches
 
 template <class Mod, class... Ms>
 find_matches(Mod& mod, Ms&&... ms) -> find_matches<Mod, Ms...>;
+
+template <class Mod, class M>
+matcher_result find_matches_for_single(source_location location, Mod& mod, instruction_ref ins, std::unique_ptr<M>& opt_ptr)
+{
+    const int trace         = value_of(MIGRAPHX_TRACE_MATCHES{});
+    const auto trace_filter = string_value_of(MIGRAPHX_TRACE_MATCHES_FOR{});
+    const bool time_matchers = enabled(MIGRAPHX_TIME_MATCHERS{});
+
+    //const auto& matcher_name = get_type_name(*opt_ptr);
+    const std::string matcher_name = typeid(*opt_ptr).name();
+    const bool trace_for     = not trace_filter.empty() and
+                                   (contains(std::string{location.file_name()}, trace_filter) or
+                                    contains(std::string{location.function_name()}, trace_filter) or
+                                    contains(matcher_name, trace_filter));
+
+    // print running matcher even if it doesn't match anything
+    if(trace > 1 and trace_for)
+        std::cout << "Running matcher: " << matcher_name << std::endl;
+
+    matcher_result r;
+    if(time_matchers or trace_for)
+    {
+        timer match_timer{};
+        r = match_instruction(get_module(mod), ins, opt_ptr->matcher());
+        const auto match_time =
+            match_timer.record<std::chrono::duration<double, std::micro>>();
+        std::cout << "Matcher time for " << matcher_name << ": " << match_time << "us"
+                    << std::endl;
+    }
+    else
+    {
+        r = match_instruction(get_module(mod), ins, opt_ptr->matcher());
+    }
+
+    return r;
+}
+
+template <class Mod, class M>
+void apply_opt(source_location location, Mod& mod, instruction_ref ins, matcher_result& res, std::unique_ptr<M>& opt_ptr)
+{
+    const int trace         = value_of(MIGRAPHX_TRACE_MATCHES{});
+    const bool validate     = enabled(MIGRAPHX_VALIDATE_MATCHES{});
+    const auto trace_filter = string_value_of(MIGRAPHX_TRACE_MATCHES_FOR{});
+    const bool time_matchers = enabled(MIGRAPHX_TIME_MATCHERS{});
+
+    //const auto& matcher_name = get_type_name(*opt_ptr);
+    const std::string matcher_name = typeid(*opt_ptr).name();
+    const bool trace_for     = not trace_filter.empty() and
+                                   (contains(std::string{location.file_name()}, trace_filter) or
+                                    contains(std::string{location.function_name()}, trace_filter) or
+                                    contains(matcher_name, trace_filter));
+
+    if(trace > 0 or trace_for)
+    {
+        std::cout << "Matched by: " << matcher_name << std::endl;
+        get_module(mod).debug_print(ins);
+    }
+    // If its already invalid dont validate it agains
+    bool invalidated = validate and get_module(mod).validate() != get_module(mod).end();
+    auto apply_time =
+        time<std::chrono::duration<double, std::micro>>([&] { opt_ptr->apply(mod, res); });
+    if(time_matchers or trace_for)
+    {
+        std::cout << "Apply time for " << matcher_name << ": " << apply_time << "us"
+                    << std::endl;
+    }
+
+    if(validate and not invalidated)
+    {
+        auto invalid = get_module(mod).validate();
+        if(invalid != get_module(mod).end())
+        {
+            std::cout << "Invalid program from match: " << matcher_name << std::endl;
+            std::cout << "Invalid instructions: " << std::endl;
+            get_module(mod).debug_print(invalid->inputs());
+            get_module(mod).debug_print(invalid);
+        }
+    }
+}
+
+template <class Mod, class M>
+void find_matches_loop(Mod& mod, std::map<size_t, std::unique_ptr<M>>& opts, 
+                        source_location location = source_location::current())
+{
+    for(auto ins : iterator_for(get_module(mod)))
+    {
+        matcher_result res;
+        size_t op_id = 0;
+        for (auto& pair : opts)
+        {
+            res = find_matches_for_single(location, mod, ins, pair.second);
+            if(res.result != get_module(mod).end())
+            {
+                op_id = pair.first;
+                break;
+            }
+        }
+
+        if (op_id > 0)
+            apply_opt(location, mod, ins, res, opts[op_id]);
+    }
+}
 
 template <class M, class F>
 struct find_generic_match

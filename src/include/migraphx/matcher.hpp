@@ -582,17 +582,6 @@ void find_matches_loop(Mod& mod, std::vector<std::unique_ptr<M>>& opts,
 {
     for(auto ins : iterator_for(get_module(mod)))
     {
-        /*matcher_result res;
-        int op_id = -1;
-        for (auto it = 0; it < opts.size(); it++)
-        {
-            res = find_matches_for_single(location, mod, ins, opts[it]);
-            if(res.result != get_module(mod).end())
-            {
-                op_id = it;
-                break;
-            }
-        }*/
         auto it = std::find_if(std::execution::par, opts.begin(), opts.end(), [&](std::unique_ptr<M>& opt) {
             matcher_result res = find_matches_for_single(location, mod, ins, opt);
             return res.result != get_module(mod).end();

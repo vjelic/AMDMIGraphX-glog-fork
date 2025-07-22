@@ -41,7 +41,8 @@
 #include <unordered_set>
 #include <utility>
 #include <typeinfo>
-#include <map>
+#include <execution>
+#include <algorithm>
 
 #ifndef MIGRAPHX_USE_TYPE_ERASED_MATCHERS
 #define MIGRAPHX_USE_TYPE_ERASED_MATCHERS 0
@@ -576,25 +577,32 @@ void apply_opt(source_location location, Mod& mod, instruction_ref ins, matcher_
 }
 
 template <class Mod, class M>
-void find_matches_loop(Mod& mod, std::map<size_t, std::unique_ptr<M>>& opts, 
+void find_matches_loop(Mod& mod, std::vector<std::unique_ptr<M>>& opts, 
                         source_location location = source_location::current())
 {
     for(auto ins : iterator_for(get_module(mod)))
     {
-        matcher_result res;
-        size_t op_id = 0;
-        for (auto& pair : opts)
+        /*matcher_result res;
+        int op_id = -1;
+        for (auto it = 0; it < opts.size(); it++)
         {
-            res = find_matches_for_single(location, mod, ins, pair.second);
+            res = find_matches_for_single(location, mod, ins, opts[it]);
             if(res.result != get_module(mod).end())
             {
-                op_id = pair.first;
+                op_id = it;
                 break;
             }
-        }
+        }*/
+        auto it = std::find_if(std::execution::par, opts.begin(), opts.end(), [&](std::unique_ptr<M>& opt) {
+            matcher_result res = find_matches_for_single(location, mod, ins, opt);
+            return res.result != get_module(mod).end();
+        });
 
-        if (op_id > 0)
-            apply_opt(location, mod, ins, res, opts[op_id]);
+        if (it != opts.end())
+        {
+            matcher_result res = find_matches_for_single(location, mod, ins, *it);
+            apply_opt(location, mod, ins, res, *it);
+        }
     }
 }
 

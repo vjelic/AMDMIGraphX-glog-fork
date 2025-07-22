@@ -39,7 +39,7 @@
 
 #include <migraphx/algorithm.hpp>
 #include <unordered_set>
-#include <map>
+#include <vector>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {
@@ -2127,46 +2127,45 @@ struct find_split_transpose : base_optimization
     }
 };
 
-static void create_opts_map(std::map<size_t, std::unique_ptr<base_optimization>>& opts)
+static void create_opts_map(std::vector<std::unique_ptr<base_optimization>>& opts)
 {
-        opts.insert({1, std::make_unique<find_inner_broadcast>()});
-        opts.insert({2, std::make_unique<find_dot_broadcast>()});
-        opts.insert({3, std::make_unique<find_double_add_lit_broadcast>()});
-        opts.insert({4, std::make_unique<find_add_lit_broadcast>()});
-        opts.insert({5, std::make_unique<find_add_convs>()});
-        opts.insert({6, std::make_unique<find_conv_dot_horiz_fusion>()});
-        opts.insert({7, std::make_unique<find_mul_conv>()});
-        opts.insert({8, std::make_unique<find_mul_slice_conv>()});
-        opts.insert({9, std::make_unique<find_mul_dot>()});
-        opts.insert({10, std::make_unique<find_dot_slice>()});
-        opts.insert({11, std::make_unique<find_dot_mul>()});
-        opts.insert({12, std::make_unique<find_mul_add>()});
-        opts.insert({13, std::make_unique<find_unit_ops>()});
-        opts.insert({14, std::make_unique<find_neg_unit_ops>()});
-        opts.insert({15, std::make_unique<eliminate_zero_point>()});
-        opts.insert({16, std::make_unique<find_zero_ops>()});
-        opts.insert({17, std::make_unique<find_dot_add>()});
-        opts.insert({18, std::make_unique<find_conv_add>()});
-        opts.insert({19, std::make_unique<find_div_const>()});
-        opts.insert({20, std::make_unique<find_sub_const>()});
-        opts.insert({21, std::make_unique<find_rsqrt>()});
-        opts.insert({22, std::make_unique<find_concat_conv>()});
-        opts.insert({23, std::make_unique<find_concat_op>()});
-        opts.insert({24, std::make_unique<find_split_concat>()});
-        opts.insert({25, std::make_unique<find_splits>()});
-        opts.insert({26, std::make_unique<find_split_reshape>()});
-        opts.insert({27, std::make_unique<find_split_transpose>()});
+        opts.emplace_back(std::make_unique<find_inner_broadcast>());
+        opts.emplace_back(std::make_unique<find_dot_broadcast>());
+        opts.emplace_back(std::make_unique<find_double_add_lit_broadcast>());
+        opts.emplace_back(std::make_unique<find_add_lit_broadcast>());
+        opts.emplace_back(std::make_unique<find_add_convs>());
+        opts.emplace_back(std::make_unique<find_conv_dot_horiz_fusion>());
+        opts.emplace_back(std::make_unique<find_mul_conv>());
+        opts.emplace_back(std::make_unique<find_mul_slice_conv>());
+        opts.emplace_back(std::make_unique<find_mul_dot>());
+        opts.emplace_back(std::make_unique<find_dot_slice>());
+        opts.emplace_back(std::make_unique<find_dot_mul>());
+        opts.emplace_back(std::make_unique<find_mul_add>());
+        opts.emplace_back(std::make_unique<find_unit_ops>());
+        opts.emplace_back(std::make_unique<find_neg_unit_ops>());
+        opts.emplace_back(std::make_unique<eliminate_zero_point>());
+        opts.emplace_back(std::make_unique<find_zero_ops>());
+        opts.emplace_back(std::make_unique<find_dot_add>());
+        opts.emplace_back(std::make_unique<find_conv_add>());
+        opts.emplace_back(std::make_unique<find_div_const>());
+        opts.emplace_back(std::make_unique<find_sub_const>());
+        opts.emplace_back(std::make_unique<find_rsqrt>());
+        opts.emplace_back(std::make_unique<find_concat_conv>());
+        opts.emplace_back(std::make_unique<find_concat_op>());
+        opts.emplace_back(std::make_unique<find_split_concat>());
+        opts.emplace_back(std::make_unique<find_splits>());
+        opts.emplace_back(std::make_unique<find_split_reshape>());
+        opts.emplace_back(std::make_unique<find_split_transpose>());
 }
 
 void simplify_algebra::apply(module& m) const
 {
+    std::vector<std::unique_ptr<base_optimization>> opts;
+    create_opts_map(opts);
+
     // Run simplifications multiple times
     m.repeat_while_changes(8, [&] {
-        std::map<size_t, std::unique_ptr<base_optimization>> opts;
-        create_opts_map(opts);
-
         match::find_matches_loop(m, opts);
-
 
         /*match::find_matches(m,
                             find_inner_broadcast{},

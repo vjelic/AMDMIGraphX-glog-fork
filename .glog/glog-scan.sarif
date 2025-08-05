@@ -1,0 +1,232 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Glog.AI",
+          "organization": "Glog.AI",
+          "fullName": "Glog, Making software more secure",
+          "version": "1.0.0",
+          "semanticVersion": "1.0.0",
+          "informationUri": "https://www.glog.ai",
+          "rules": [
+            {
+              "id": "glog-ea7e63ab-5218-4d5a-94fa-177c376bede7",
+              "help": {
+                "text": "",
+                "markdown": "## Description\n\nThe `strncpy` function in C++ is considered unsafe because it does not guarantee null-termination of the destination string when the source string length is greater than or equal to the destination buffer size. This can lead to buffer overflows, which can be exploited to execute arbitrary code, overwrite data, or cause a system crash.\n\n## Mitigation Advice\n\nTo mitigate this vulnerability, use safer string handling functions that ensure null-termination of the destination string. In C++, this can be achieved by using the `std::string` class or the `strlcpy` function if available.\n\n## Source Code Fix Recommendation\n\nReplace the `strncpy` function with `std::string`:\n\n```cpp\n#include <string>\n#include <exception>\n\nstd::string ex_msg = ex.what();\nif (ex_msg.size() > ex_msg_size) {\n    ex_msg = ex_msg.substr(0, ex_msg_size);\n}\n```\n\n## Library Dependencies\n\nThe code example requires the following library dependencies:\n\n- `<string>`: for `std::string`\n- `<exception>`: for `std::exception`\n\n## References\n\n- [CWE-119: Improper Restriction of Operations within the Bounds of a Memory Buffer](https://cwe.mitre.org/data/definitions/119.html)"
+              },
+              "properties": {
+                "tags": [
+                  "DS111237"
+                ]
+              }
+            },
+            {
+              "id": "glog-aebe31fc-3cb5-45ca-9fe2-ba65e23d33da",
+              "help": {
+                "text": "",
+                "markdown": "### Description\n\nThe \"Vulnerable/Compromised Hash Algorithm\" vulnerability in C++ refers to the use of cryptographic hash functions that are considered weak or compromised. SHA-1 is one such algorithm that has been deprecated due to its vulnerability to collision attacks, where two different inputs produce the same hash output. This can lead to security breaches, such as data integrity violations and unauthorized data access.\n\n### General Mitigation Advice\n\nTo mitigate this vulnerability, it is recommended to replace SHA-1 with a more secure hash algorithm, such as SHA-256 or SHA-3. These algorithms provide stronger security guarantees and are less susceptible to collision attacks.\n\n### Source Code Fix Recommendation\n\nBelow is an example of how to replace SHA-1 with SHA-256 using the OpenSSL library in C++.\n\n```cpp\n#include <openssl/sha.h>\n#include <iostream>\n#include <iomanip>\n#include <sstream>\n#include <string>\n\n// Function to compute SHA-256 hash\nstd::string computeSHA256(const std::string& input) {\n    unsigned char hash[SHA256_DIGEST_LENGTH];\n    SHA256_CTX sha256;\n    SHA256_Init(&sha256);\n    SHA256_Update(&sha256, input.c_str(), input.size());\n    SHA256_Final(hash, &sha256);\n\n    std::stringstream ss;\n    for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i) {\n        ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];\n    }\n    return ss.str();\n}\n\nint main() {\n    std::string data = \"Example data to hash\";\n    std::string hash = computeSHA256(data);\n    std::cout << \"SHA-256 Hash: \" << hash << std::endl;\n    return 0;\n}\n```\n\n### Library Dependencies\n\nTo execute the above code example, the following library dependencies are required:\n\n- OpenSSL library (`libssl-dev` on Linux systems)\n\n### OWASP Resources\n\n- [OWASP Cryptographic Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html)\n- [OWASP Top Ten 2021](https://owasp.org/Top10/)\n\n### Common Weakness Enumeration (CWE)\n\n- [CWE-327: Use of a Broken or Risky Cryptographic Algorithm](https://cwe.mitre.org/data/definitions/327.html)"
+              },
+              "properties": {
+                "tags": [
+                  "DS126858"
+                ]
+              }
+            }
+          ],
+          "language": "en-US",
+          "contents": [
+            "localizedData",
+            "nonLocalizedData"
+          ],
+          "isComprehensive": false
+        }
+      },
+      "language": "en-US",
+      "results": [
+        {
+          "ruleId": "glog-ea7e63ab-5218-4d5a-94fa-177c376bede7",
+          "kind": "fail",
+          "level": "error",
+          "message": {
+            "text": "\"Detected Use of Prohibited C Function (strncpy)\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/api/include/migraphx/migraphx.hpp"
+                },
+                "region": {
+                  "startLine": 388,
+                  "startColumn": 21,
+                  "endLine": 388,
+                  "endColumn": 60,
+                  "charOffset": 10181,
+                  "charLength": 39,
+                  "snippet": {
+                    "text": "strncpy(ex_msg, ex.what(), ex_msg_size)",
+                    "rendered": {
+                      "text": "strncpy(ex_msg, ex.what(), ex_msg_size)",
+                      "markdown": "`strncpy(ex_msg, ex.what(), ex_msg_size)`"
+                    }
+                  },
+                  "sourceLanguage": "cpp"
+                }
+              }
+            }
+          ],
+          "fixes": [
+            {
+              "description": {
+                "text": "strncpy is dangerous, as if the source contains 'n' or more characters, it will not null terminate the destination."
+              },
+              "artifactChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "src/api/include/migraphx/migraphx.hpp"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "charOffset": 10181,
+                        "charLength": 39
+                      },
+                      "insertedContent": {
+                        "text": "strcpy_s(ex_msg,  ex_msg_size,  ex.what())"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "description": {
+                "text": "strncpy is dangerous, as if the source contains 'n' or more characters, it will not null terminate the destination."
+              },
+              "artifactChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "src/api/include/migraphx/migraphx.hpp"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "charOffset": 10181,
+                        "charLength": 39
+                      },
+                      "insertedContent": {
+                        "text": "strlcpy(ex_msg,  ex.what(),  ex_msg_size)"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "DevSkimSeverity": "Important",
+            "DevSkimConfidence": "High",
+            "tags": [
+              "API.DangerousAPI.BannedFunction"
+            ]
+          }
+        },
+        {
+          "ruleId": "glog-aebe31fc-3cb5-45ca-9fe2-ba65e23d33da",
+          "kind": "fail",
+          "level": "error",
+          "message": {
+            "text": "\"Vulnerable/Compromised Hash Algorithm\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/driver/main.cpp"
+                },
+                "region": {
+                  "startLine": 1004,
+                  "startColumn": 34,
+                  "endLine": 1004,
+                  "endColumn": 38,
+                  "charOffset": 33036,
+                  "charLength": 4,
+                  "snippet": {
+                    "text": "SHA1",
+                    "rendered": {
+                      "text": "SHA1",
+                      "markdown": "`SHA1`"
+                    }
+                  },
+                  "sourceLanguage": "cpp"
+                }
+              }
+            }
+          ],
+          "fixes": [
+            {
+              "description": {
+                "text": "A weak or broken hash algorithm was detected."
+              },
+              "artifactChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "src/driver/main.cpp"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "charOffset": 33036,
+                        "charLength": 4
+                      },
+                      "insertedContent": {
+                        "text": "SHA256"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "description": {
+                "text": "A weak or broken hash algorithm was detected."
+              },
+              "artifactChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "src/driver/main.cpp"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "charOffset": 33036,
+                        "charLength": 4
+                      },
+                      "insertedContent": {
+                        "text": "SHA512"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "DevSkimSeverity": "Critical",
+            "DevSkimConfidence": "High",
+            "tags": [
+              "Cryptography.BannedHashAlgorithm"
+            ]
+          }
+        }
+      ],
+      "newlineSequences": [
+        "\r\n",
+        "\n"
+      ]
+    }
+  ]
+}
